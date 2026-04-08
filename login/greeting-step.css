@@ -1,0 +1,385 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   GREETING STEP - Premium Welcome Experience
+   Psychology-driven design for HL Fold exclusivity
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.greeting-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── WELCOME STATE (Not Premium) ─────────────────────────────────────────── */
+.greeting-welcome {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeInDown 0.5s ease-out both;
+}
+
+.greeting-title {
+  font-size: 2.2rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: #000;
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+
+.greeting-subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+  font-weight: 300;
+}
+
+/* ─── SUCCESS STATE (Premium) ────────────────────────────────────────────── */
+.greeting-success {
+  text-align: center;
+  margin-bottom: 32px;
+  animation: fadeInDown 0.5s ease-out both;
+}
+
+.greeting-checkmark {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: #000;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 300;
+  animation: successPulse 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+@keyframes successPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.greeting-success .greeting-title {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+}
+
+/* ─── PITCH SECTION (Persuasion Psychology) ──────────────────────────────── */
+.greeting-pitch {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 32px 28px;
+  margin-bottom: 32px;
+  animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+.pitch-highlight {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.pitch-main {
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.pitch-secondary {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.highlight-gold {
+  color: #D4AF37;
+  font-weight: 600;
+}
+
+/* ─── PRICING (Scarcity + Value) ────────────────────────────────────────── */
+.pitch-pricing {
+  text-align: center;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+}
+
+.pricing-lead {
+  font-size: 0.85rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.pricing-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.currency {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.amount {
+  font-size: 3.2rem;
+  font-weight: 300;
+  color: #000;
+  line-height: 1;
+}
+
+.period {
+  font-size: 1rem;
+  color: #999;
+  font-weight: 300;
+}
+
+.pricing-note {
+  font-size: 0.8rem;
+  color: #999;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ─── BENEFITS (Social Proof) ────────────────────────────────────────────── */
+.pitch-benefits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 6px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.benefit-item:nth-child(1) { animation-delay: 0.1s; }
+.benefit-item:nth-child(2) { animation-delay: 0.15s; }
+.benefit-item:nth-child(3) { animation-delay: 0.2s; }
+.benefit-item:nth-child(4) { animation-delay: 0.25s; }
+
+.benefit-check {
+  color: #4169e1;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.benefit-text {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+/* ─── ACTION BUTTONS (Call-to-Action Psychology) ────────────────────────── */
+.greeting-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.btn-join-fold {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-join-fold::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: #4169e1;
+  transition: left 0.3s ease;
+  z-index: -1;
+}
+
+.btn-join-fold:hover::before {
+  left: 0;
+}
+
+.btn-join-fold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.btn-join-fold:active {
+  transform: translateY(0);
+}
+
+.btn-explore {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #000;
+  background: #fff;
+  border: 1.5px solid #000;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.25s ease;
+}
+
+.btn-explore:hover {
+  background: #000;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.btn-explore:active {
+  transform: translateY(0);
+}
+
+/* ─── LOADING STATE (Premium) ────────────────────────────────────────────── */
+.greeting-loading {
+  text-align: center;
+  padding: 24px;
+}
+
+.greeting-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #4169e1;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: spin 0.8s linear infinite;
+}
+
+.greeting-loading p {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────────────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── MOBILE RESPONSIVE ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .greeting-container {
+    max-width: 100%;
+  }
+
+  .greeting-title {
+    font-size: 1.8rem;
+  }
+
+  .greeting-success .greeting-title {
+    font-size: 2rem;
+  }
+
+  .greeting-pitch {
+    padding: 24px 20px;
+    margin-bottom: 24px;
+  }
+
+  .pitch-main {
+    font-size: 1.15rem;
+  }
+
+  .pricing-amount {
+    margin-bottom: 6px;
+  }
+
+  .amount {
+    font-size: 2.6rem;
+  }
+
+  .pitch-benefits {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .benefit-item {
+    padding: 8px;
+  }
+
+  .benefit-text {
+    font-size: 0.75rem;
+  }
+}

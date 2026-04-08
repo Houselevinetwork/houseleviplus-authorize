@@ -1,0 +1,77 @@
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@houselevi/auth';
+import { LoginForm } from './LoginForm';
+import { HeroCarousel } from './HeroCarousel';
+import { BrandPanel } from './BrandPanel';
+import { useHeroCarousel } from '../../lib/hooks/useHeroCarousel';
+import './login-section.css';
+
+export function LoginSection() {
+  const {
+    step,
+    email,
+    otp,
+    loading,
+    error,
+    countdown,
+    userName,        // ← NEW: Get userName from useAuth
+    setEmail,
+    setOtp,
+    handleEmailSubmit,
+    handleOTPSubmit,
+    handleSignupRequest,
+    handleResendOTP,
+    backToEmail,
+  } = useAuth();
+
+  const [emailSent, setEmailSent] = useState(false);
+  const { heroItems, currentSlide, setCurrentSlide, loading: heroLoading } =
+    useHeroCarousel();
+
+  const handleSignup = async () => {
+    await handleSignupRequest();
+    setEmailSent(true);
+  };
+
+  const formProps = {
+    step,
+    email,
+    otp,
+    loading,
+    error,
+    countdown,
+    emailSent,
+    userName,        // ← NEW: Pass userName to LoginForm
+    onEmailChange: setEmail,
+    onOtpChange: setOtp,
+    onEmailSubmit: handleEmailSubmit,
+    onOtpSubmit: handleOTPSubmit,
+    onSignup: handleSignup,
+    onResendOTP: handleResendOTP,
+    onBackToEmail: backToEmail,
+  };
+
+  return (
+    <div className="login-root">
+      <LoginForm {...formProps} />
+      <div className="login-right">
+        <div className="login-right-inner">
+          {!heroLoading && heroItems.length > 0 ? (
+            <>
+              <HeroCarousel
+                items={heroItems}
+                currentSlide={currentSlide}
+                onSlideChange={setCurrentSlide}
+              />
+              <BrandPanel variant="carousel" />
+            </>
+          ) : (
+            <BrandPanel variant="default" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
