@@ -23,13 +23,15 @@ export function LoginSection() {
     }
   }, [countdown]);
 
+  const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'https://api.houselevi.com';
+  const webAppUrl = process.env.NEXT_PUBLIC_WEB_APP_URL || 'https://houselevi.com';
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'http://localhost:4000';
       const url = `${authServerUrl}/auth/check-email`;
 
       const response = await fetch(url, {
@@ -45,17 +47,13 @@ export function LoginSection() {
         return;
       }
 
-      console.log('📧 Email Discovery Response:', data);
-
       if (data.action === 'signup' || !data.exists) {
-        console.log('✅ New user detected - showing signup step');
         setEmailExists(false);
         setStep('signup');
         return;
       }
 
       if (data.action === 'login' || data.exists) {
-        console.log('✅ Existing user detected - sending OTP');
         setEmailExists(true);
 
         const otpUrl = `${authServerUrl}/auth/otp-request`;
@@ -89,7 +87,6 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'http://localhost:4000';
       const url = `${authServerUrl}/auth/request-signup`;
 
       const response = await fetch(url, {
@@ -107,7 +104,7 @@ export function LoginSection() {
 
       setError(null);
       alert('Verification email sent! Check your inbox to complete signup.');
-      
+
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Failed to request verification');
@@ -122,7 +119,6 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'http://localhost:4000';
       const url = `${authServerUrl}/auth/otp-verify`;
 
       const response = await fetch(url, {
@@ -148,7 +144,7 @@ export function LoginSection() {
         localStorage.setItem('user', JSON.stringify(data.user));
       }
 
-      const redirectUrl = `${window.location.origin.replace(':3003', ':3000')}/auth/callback?code=${data.accessToken}`;
+      const redirectUrl = `${webAppUrl}/auth/callback?code=${data.accessToken}`;
       window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || 'Verification failed');
@@ -162,7 +158,6 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'http://localhost:4000';
       const url = `${authServerUrl}/auth/otp-request`;
 
       const response = await fetch(url, {
@@ -277,7 +272,6 @@ export function LoginSection() {
                   {loading ? 'Verifying...' : 'Verify'}
                 </button>
 
-                {/* Side-by-side buttons with proper spacing */}
                 <div style={{ display: 'flex', gap: '16px', marginTop: '20px', justifyContent: 'center' }}>
                   <button
                     type="button"
@@ -333,7 +327,6 @@ export function LoginSection() {
                   {loading ? 'Sending...' : 'Send Verification Link'}
                 </button>
 
-                {/* Side-by-side button with proper spacing */}
                 <div style={{ display: 'flex', gap: '16px', marginTop: '20px', justifyContent: 'center' }}>
                   <button
                     type="button"
@@ -354,7 +347,6 @@ export function LoginSection() {
         </div>
       </div>
 
-      {/* CSS for black underlined buttons */}
       <style jsx>{`
         .btn-text-black {
           background: none;
