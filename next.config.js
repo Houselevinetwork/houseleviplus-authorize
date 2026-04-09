@@ -6,8 +6,7 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   env: {
-    NEXT_PUBLIC_AUTHORIZE_SERVER_URL: process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'http://localhost:3002',
-  },
+NEXT_PUBLIC_AUTHORIZE_SERVER_URL: process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'https://api.houselevi.com',  },
 }
 
 module.exports = nextConfig
