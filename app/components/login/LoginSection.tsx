@@ -83,7 +83,7 @@ export function LoginSection() {
 
   const handleSignupRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setError(null);-
     setLoading(true);
 
     try {
