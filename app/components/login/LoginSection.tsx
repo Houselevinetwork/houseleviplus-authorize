@@ -41,10 +41,13 @@ export function LoginSection() {
   }, [resendCountdown]);
 
   const completeLogin = (data: LoginResult) => {
-    localStorage.setItem('token', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('user', JSON.stringify(data.user));
-
+    // The backend already set an HttpOnly session cookie (scoped to
+    // .houselevi.com) on this response — that's what actually authenticates
+    // the user going forward. We deliberately do NOT persist accessToken/
+    // refreshToken/user to localStorage: this component redirects away
+    // immediately, so there's nothing here that needs to survive past this
+    // request, and a JS-readable store is exactly what an XSS payload would
+    // read first.
     window.location.href = `${webAppUrl}/auth/callback?code=${data.accessToken}`;
   };
 
