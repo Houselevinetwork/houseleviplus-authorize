@@ -4,11 +4,25 @@ import { useState, useEffect } from 'react';
 import { EmailStep } from './steps/EmailStep';
 import { OtpStep } from './steps/OtpStep';
 import { DeviceLimitStep } from './steps/DeviceLimitStep';
-import { requestOtp, verifyOtp, freeDeviceSlot, ApiError, type LoginResult, type DeviceSummary } from '@/lib/api';
+import { SignupSentStep } from './steps/SignupSentStep';
+import {
+  requestOtp,
+  verifyOtp,
+  freeDeviceSlot,
+  requestSignup,
+  ApiError,
+  type LoginResult,
+  type DeviceSummary,
+} from '@/lib/api';
 
-type Step = 'email' | 'otp' | 'device-limit';
+type Step = 'email' | 'otp' | 'device-limit' | 'signup-sent';
 
 const webAppUrl = process.env.NEXT_PUBLIC_WEB_APP_URL || 'https://houselevi.com';
+
+// Backend doesn't give a resend cooldown for request-signup (its real limit
+// is "max 3 emails/hour", enforced server-side) — this is just a client-side
+// guard against accidental double-clicks.
+const SIGNUP_RESEND_COOLDOWN_SECONDS = 60;
 
 function friendlyOtpError(err: ApiError): string {
   switch (err.code) {
@@ -30,7 +44,9 @@ export function LoginSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCountdown, setResendCountdown] = useState(0);
-  const [otpExpiresIn, setOtpExpiresIn] = useState<number | undefined>(undefined);
+  // Validity hint for whatever the backend just sent — an OTP code (600s)
+  // or a signup verification link (900s). Only one step shows this at a time.
+  const [codeExpiresIn, setCodeExpiresIn] = useState<number | undefined>(undefined);
   const [deviceLimitDevices, setDeviceLimitDevices] = useState<DeviceSummary[]>([]);
   const [deviceManagementToken, setDeviceManagementToken] = useState<string | null>(null);
 
@@ -61,8 +77,23 @@ export function LoginSection() {
       setStep('otp');
       setOtp('');
       setResendCountdown(result.canResendIn || 60);
-      setOtpExpiresIn(result.expiresIn || 600);
+      setCodeExpiresIn(result.expiresIn || 600);
     } catch (err) {
+      if (err instanceof ApiError && err.isEmailNotFound()) {
+        // Netflix-style routing: no account for this email yet, so silently
+        // switch to the signup path instead of dead-ending on an error.
+        try {
+          const signupResult = await requestSignup(email);
+          setStep('signup-sent');
+          setResendCountdown(SIGNUP_RESEND_COOLDOWN_SECONDS);
+          setCodeExpiresIn(signupResult.expiresIn || 900);
+        } catch (signupErr) {
+          setError(
+            signupErr instanceof ApiError ? signupErr.message : 'Something went wrong. Please try again.',
+          );
+        }
+        return;
+      }
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
@@ -102,9 +133,24 @@ export function LoginSection() {
     try {
       const result = await requestOtp(email);
       setResendCountdown(result.canResendIn || 60);
-      setOtpExpiresIn(result.expiresIn || 600);
+      setCodeExpiresIn(result.expiresIn || 600);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendSignup = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const result = await requestSignup(email);
+      setResendCountdown(SIGNUP_RESEND_COOLDOWN_SECONDS);
+      setCodeExpiresIn(result.expiresIn || 900);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to resend verification email.');
     } finally {
       setLoading(false);
     }
@@ -164,10 +210,22 @@ export function LoginSection() {
               loading={loading}
               error={error}
               countdown={resendCountdown}
-              expiresInSeconds={otpExpiresIn}
+              expiresInSeconds={codeExpiresIn}
               onOtpChange={setOtp}
               onSubmit={handleOtpSubmit}
               onResend={handleResendOtp}
+              onBack={backToEmail}
+            />
+          )}
+
+          {step === 'signup-sent' && (
+            <SignupSentStep
+              email={email}
+              loading={loading}
+              error={error}
+              expiresInSeconds={codeExpiresIn}
+              canResendIn={resendCountdown}
+              onResend={handleResendSignup}
               onBack={backToEmail}
             />
           )}

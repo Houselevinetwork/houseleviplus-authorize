@@ -56,6 +56,16 @@ export class ApiError extends Error {
   asDeviceLimitReached(): DeviceLimitReachedPayload | null {
     return this.code === 'DEVICE_LIMIT_REACHED' ? (this.data as DeviceLimitReachedPayload) : null;
   }
+
+  /**
+   * otp-request's "no account for this email" response is a plain
+   * BadRequestException — no `code` field (verified against
+   * auth.service.ts requestOTP()). Match on status + message text instead.
+   * Backend improvement for later: give this its own AuthErrorCode.
+   */
+  isEmailNotFound(): boolean {
+    return this.statusCode === 400 && /email not found/i.test(this.message);
+  }
 }
 
 function toApiError(error: unknown): ApiError {
@@ -90,6 +100,28 @@ export interface OtpRequestResult {
 export async function requestOtp(email: string): Promise<OtpRequestResult> {
   try {
     const { data } = await api.post<OtpRequestResult>('/auth/otp-request', { email });
+    return data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export interface RequestSignupResult {
+  success: boolean;
+  message: string;
+  expiresIn: number; // seconds the verification link stays valid (900 = 15 min)
+}
+
+/**
+ * Netflix-style signup: body is {email} only (SignupRequestDto has no other
+ * fields — verified against signup-request.dto.ts). The backend emails a
+ * verification LINK (not a code) built from its own FRONTEND_URL config;
+ * that link's destination is out of this app's control, so there is no
+ * corresponding "verifySignup" call here.
+ */
+export async function requestSignup(email: string): Promise<RequestSignupResult> {
+  try {
+    const { data } = await api.post<RequestSignupResult>('/auth/request-signup', { email });
     return data;
   } catch (error) {
     throw toApiError(error);
