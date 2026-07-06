@@ -6,6 +6,8 @@ interface OtpStepProps {
   loading: boolean;
   error: string | null;
   countdown: number;
+  /** Seconds the code stays valid for (e.g. 600 = 10 min); shown as a hint. */
+  expiresInSeconds?: number;
   onOtpChange: (otp: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onResend: () => void;
@@ -18,6 +20,7 @@ export function OtpStep({
   loading,
   error,
   countdown,
+  expiresInSeconds,
   onOtpChange,
   onSubmit,
   onResend,
@@ -30,6 +33,11 @@ export function OtpStep({
         <p>
           We sent a code to <strong>{email}</strong>
         </p>
+        {typeof expiresInSeconds === 'number' && (
+          <p className="login-hint">
+            This code is valid for {Math.round(expiresInSeconds / 60)} minutes.
+          </p>
+        )}
       </div>
 
       {error && <div className="login-error">{error}</div>}

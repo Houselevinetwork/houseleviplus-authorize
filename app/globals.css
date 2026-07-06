@@ -261,6 +261,75 @@ body {
   border-left: 4px solid #c62828;
 }
 
+/* Small inline hints under a heading (e.g. code expiry) */
+.login-hint {
+  font-size: 13px;
+  color: #999999;
+  margin-top: 4px;
+}
+
+/* Device list (device-limit-reached step) */
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.device-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.device-card:hover:not(:disabled) {
+  border-color: #0066ff;
+  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.1);
+}
+
+.device-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.device-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.device-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-card-meta {
+  font-size: 13px;
+  color: #666666;
+}
+
+.device-card-action {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0066ff;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .login-logo {

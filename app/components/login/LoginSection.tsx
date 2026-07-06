@@ -1,30 +1,52 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { EmailStep } from './steps/EmailStep';
+import { OtpStep } from './steps/OtpStep';
+import { DeviceLimitStep } from './steps/DeviceLimitStep';
+import { requestOtp, verifyOtp, freeDeviceSlot, ApiError, type LoginResult, type DeviceSummary } from '@/lib/api';
+
+type Step = 'email' | 'otp' | 'device-limit';
+
+const webAppUrl = process.env.NEXT_PUBLIC_WEB_APP_URL || 'https://houselevi.com';
+
+function friendlyOtpError(err: ApiError): string {
+  switch (err.code) {
+    case 'OTP_INVALID':
+      return "That code isn't right. Please check and try again.";
+    case 'OTP_EXPIRED':
+      return 'This code has expired. Request a new one below.';
+    case 'OTP_MAX_ATTEMPTS':
+      return 'Too many incorrect attempts. Please request a new code.';
+    default:
+      return err.message;
+  }
+}
 
 export function LoginSection() {
-  const searchParams = useSearchParams();
-  const state = searchParams.get('state') || '';
-  const nonce = searchParams.get('nonce') || '';
-
-  const [step, setStep] = useState<'email' | 'otp' | 'signup'>('email');
+  const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
-  const [emailExists, setEmailExists] = useState<boolean | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [otpExpiresIn, setOtpExpiresIn] = useState<number | undefined>(undefined);
+  const [deviceLimitDevices, setDeviceLimitDevices] = useState<DeviceSummary[]>([]);
+  const [deviceManagementToken, setDeviceManagementToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
+    if (resendCountdown <= 0) return;
+    const timer = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
 
-  const authServerUrl = process.env.NEXT_PUBLIC_AUTHORIZE_SERVER_URL || 'https://api.houselevi.com';
-  const webAppUrl = process.env.NEXT_PUBLIC_WEB_APP_URL || 'https://houselevi.com';
+  const completeLogin = (data: LoginResult) => {
+    localStorage.setItem('token', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    window.location.href = `${webAppUrl}/auth/callback?code=${data.accessToken}`;
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,82 +54,13 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const url = `${authServerUrl}/auth/check-email`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Something went wrong');
-        return;
-      }
-
-      if (data.action === 'signup' || !data.exists) {
-        setEmailExists(false);
-        setStep('signup');
-        return;
-      }
-
-      if (data.action === 'login' || data.exists) {
-        setEmailExists(true);
-
-        const otpUrl = `${authServerUrl}/auth/otp-request`;
-        const otpResponse = await fetch(otpUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, purpose: 'login' }),
-        });
-
-        const otpData = await otpResponse.json();
-
-        if (!otpResponse.ok) {
-          setError(otpData.error || 'Failed to send OTP');
-          return;
-        }
-
-        setStep('otp');
-        setCountdown(otpData.canResendIn || 60);
-        return;
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to check email');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignupRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);-
-    setLoading(true);
-
-    try {
-      const url = `${authServerUrl}/auth/request-signup`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to send verification email');
-        return;
-      }
-
-      setError(null);
-      alert('Verification email sent! Check your inbox to complete signup.');
-
-      window.location.href = '/';
-    } catch (err: any) {
-      setError(err.message || 'Failed to request verification');
+      const result = await requestOtp(email);
+      setStep('otp');
+      setOtp('');
+      setResendCountdown(result.canResendIn || 60);
+      setOtpExpiresIn(result.expiresIn || 600);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -119,63 +72,52 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const url = `${authServerUrl}/auth/otp-verify`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Invalid code');
-        return;
+      const result = await verifyOtp(email, otp);
+      completeLogin(result);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const deviceLimit = err.asDeviceLimitReached();
+        if (deviceLimit) {
+          setDeviceLimitDevices(deviceLimit.devices);
+          setDeviceManagementToken(deviceLimit.deviceManagementToken);
+          setStep('device-limit');
+          return;
+        }
+        setError(friendlyOtpError(err));
+      } else {
+        setError('Verification failed. Please try again.');
       }
-
-      if (data.accessToken) {
-        localStorage.setItem('token', data.accessToken);
-      }
-      if (data.refreshToken) {
-        localStorage.setItem('refreshToken', data.refreshToken);
-      }
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-
-      const redirectUrl = `${webAppUrl}/auth/callback?code=${data.accessToken}`;
-      window.location.href = redirectUrl;
-    } catch (err: any) {
-      setError(err.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOTP = async () => {
+  const handleResendOtp = async () => {
     setError(null);
     setLoading(true);
 
     try {
-      const url = `${authServerUrl}/auth/otp-request`;
+      const result = await requestOtp(email);
+      setResendCountdown(result.canResendIn || 60);
+      setOtpExpiresIn(result.expiresIn || 600);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose: 'login' }),
-      });
+  const handleFreeSlot = async (deviceId: string) => {
+    if (!deviceManagementToken) return;
 
-      const data = await response.json();
+    setError(null);
+    setLoading(true);
 
-      if (!response.ok) {
-        setError(data.error || 'Failed to resend code');
-        return;
-      }
-
-      setCountdown(data.canResendIn || 60);
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend code');
+    try {
+      const result = await freeDeviceSlot(deviceManagementToken, deviceId);
+      completeLogin(result);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to sign out that device. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -184,8 +126,9 @@ export function LoginSection() {
   const backToEmail = () => {
     setStep('email');
     setOtp('');
-    setEmailExists(null);
     setError(null);
+    setDeviceLimitDevices([]);
+    setDeviceManagementToken(null);
   };
 
   return (
@@ -201,174 +144,42 @@ export function LoginSection() {
 
       <div className="login-form-wrap">
         <div>
-          {/* STEP 1: Email Entry */}
           {step === 'email' && (
-            <div className="login-form">
-              <h2 className="login-title">Sign in to House Levi+</h2>
-              <p className="login-subtitle">
-                Enter your email to get started
-              </p>
-
-              {error && <div className="login-error">{error}</div>}
-
-              <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                <div className="login-field" style={{ marginBottom: '20px' }}>
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || !email}
-                  className="btn-primary"
-                >
-                  {loading ? 'Checking...' : 'Continue'}
-                </button>
-              </form>
-
-              <p className="login-help-text">
-                We'll check if you have an account and send the appropriate verification method.
-              </p>
-            </div>
+            <EmailStep
+              email={email}
+              loading={loading}
+              error={error}
+              onEmailChange={setEmail}
+              onSubmit={handleEmailSubmit}
+            />
           )}
 
-          {/* STEP 2: OTP for Existing Users */}
           {step === 'otp' && (
-            <div className="login-form">
-              <h2 className="login-title">Enter Verification Code</h2>
-              <p className="login-subtitle">
-                We sent a 6-digit code to <strong>{email}</strong>
-              </p>
-
-              {error && <div className="login-error">{error}</div>}
-
-              <form onSubmit={handleOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                <div className="login-field" style={{ marginBottom: '20px' }}>
-                  <label htmlFor="otp">Verification Code</label>
-                  <input
-                    id="otp"
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
-                    maxLength={6}
-                    inputMode="numeric"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || otp.length !== 6}
-                  className="btn-primary"
-                >
-                  {loading ? 'Verifying...' : 'Verify'}
-                </button>
-
-                <div style={{ display: 'flex', gap: '16px', marginTop: '20px', justifyContent: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={loading || countdown > 0}
-                    className="btn-text-black"
-                  >
-                    {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={backToEmail}
-                    className="btn-text-black"
-                  >
-                    Use Different Email
-                  </button>
-                </div>
-              </form>
-
-              <p className="login-help-text">
-                Didn't receive the code? Check your spam folder or request a new one.
-              </p>
-            </div>
+            <OtpStep
+              email={email}
+              otp={otp}
+              loading={loading}
+              error={error}
+              countdown={resendCountdown}
+              expiresInSeconds={otpExpiresIn}
+              onOtpChange={setOtp}
+              onSubmit={handleOtpSubmit}
+              onResend={handleResendOtp}
+              onBack={backToEmail}
+            />
           )}
 
-          {/* STEP 3: Signup for New Users */}
-          {step === 'signup' && (
-            <div className="login-form">
-              <h2 className="login-title">Create Your Account</h2>
-              <p className="login-subtitle">
-                We'll send you a verification link to complete signup
-              </p>
-
-              {error && <div className="login-error">{error}</div>}
-
-              <form onSubmit={handleSignupRequest} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                <div className="login-field" style={{ marginBottom: '20px' }}>
-                  <label htmlFor="signup-email">Email</label>
-                  <input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    readOnly
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary"
-                >
-                  {loading ? 'Sending...' : 'Send Verification Link'}
-                </button>
-
-                <div style={{ display: 'flex', gap: '16px', marginTop: '20px', justifyContent: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={backToEmail}
-                    className="btn-text-black"
-                  >
-                    Use Different Email
-                  </button>
-                </div>
-              </form>
-
-              <p className="login-help-text">
-                You'll receive an email with a link to finish creating your account.
-                The link expires in 15 minutes.
-              </p>
-            </div>
+          {step === 'device-limit' && (
+            <DeviceLimitStep
+              devices={deviceLimitDevices}
+              loading={loading}
+              error={error}
+              onSelectDevice={handleFreeSlot}
+              onBack={backToEmail}
+            />
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        .btn-text-black {
-          background: none;
-          border: none;
-          color: #000000;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 0;
-          text-decoration: underline;
-          transition: color 0.3s ease;
-        }
-
-        .btn-text-black:hover {
-          color: #333333;
-        }
-
-        .btn-text-black:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      `}</style>
     </div>
   );
 }
