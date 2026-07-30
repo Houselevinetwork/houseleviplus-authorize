@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { EmailStep } from './steps/EmailStep';
 import { OtpStep } from './steps/OtpStep';
 import { DeviceLimitStep } from './steps/DeviceLimitStep';
@@ -18,6 +19,29 @@ import {
 type Step = 'email' | 'otp' | 'device-limit' | 'signup-sent';
 
 const webAppUrl = process.env.NEXT_PUBLIC_WEB_APP_URL || 'https://houselevi.com';
+
+// Callers (e.g. gopremium) that redirect here to log in can pass ?returnTo=
+// so the user lands back where they came from instead of the default web
+// app. Only ever redirect to a *.houselevi.com origin -- never to whatever
+// an attacker put in the query string.
+function resolveAllowedReturnToOrigin(candidate: string | null): string | null {
+  if (!candidate) return null;
+
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return null;
+  }
+
+  if (url.protocol !== 'https:') return null;
+
+  const hostname = url.hostname.toLowerCase();
+  const isHouseLeviHost = hostname === 'houselevi.com' || hostname.endsWith('.houselevi.com');
+  if (!isHouseLeviHost) return null;
+
+  return url.origin;
+}
 
 // Backend doesn't give a resend cooldown for request-signup (its real limit
 // is "max 3 emails/hour", enforced server-side) — this is just a client-side
@@ -38,6 +62,7 @@ function friendlyOtpError(err: ApiError): string {
 }
 
 export function LoginSection() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -64,7 +89,9 @@ export function LoginSection() {
     // immediately, so there's nothing here that needs to survive past this
     // request, and a JS-readable store is exactly what an XSS payload would
     // read first.
-    window.location.href = `${webAppUrl}/auth/callback?code=${data.accessToken}`;
+    const returnTo = resolveAllowedReturnToOrigin(searchParams.get('returnTo'));
+    const redirectBase = returnTo || webAppUrl;
+    window.location.href = `${redirectBase}/auth/callback?code=${data.accessToken}`;
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
