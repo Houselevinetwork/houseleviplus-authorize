@@ -81,6 +81,8 @@ export function LoginSection() {
     return () => clearTimeout(timer);
   }, [resendCountdown]);
 
+  const returnTo = resolveAllowedReturnToOrigin(searchParams.get('returnTo'));
+
   const completeLogin = (data: LoginResult) => {
     // The backend already set an HttpOnly session cookie (scoped to
     // .houselevi.com) on this response — that's what actually authenticates
@@ -89,7 +91,6 @@ export function LoginSection() {
     // immediately, so there's nothing here that needs to survive past this
     // request, and a JS-readable store is exactly what an XSS payload would
     // read first.
-    const returnTo = resolveAllowedReturnToOrigin(searchParams.get('returnTo'));
     const redirectBase = returnTo || webAppUrl;
     window.location.href = `${redirectBase}/auth/callback?code=${data.accessToken}`;
   };
@@ -110,7 +111,7 @@ export function LoginSection() {
         // Netflix-style routing: no account for this email yet, so silently
         // switch to the signup path instead of dead-ending on an error.
         try {
-          const signupResult = await requestSignup(email);
+          const signupResult = await requestSignup(email, returnTo);
           setStep('signup-sent');
           setResendCountdown(SIGNUP_RESEND_COOLDOWN_SECONDS);
           setCodeExpiresIn(signupResult.expiresIn || 900);
@@ -173,7 +174,7 @@ export function LoginSection() {
     setLoading(true);
 
     try {
-      const result = await requestSignup(email);
+      const result = await requestSignup(email, returnTo);
       setResendCountdown(SIGNUP_RESEND_COOLDOWN_SECONDS);
       setCodeExpiresIn(result.expiresIn || 900);
     } catch (err) {

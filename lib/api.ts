@@ -113,15 +113,18 @@ export interface RequestSignupResult {
 }
 
 /**
- * Netflix-style signup: body is {email} only (SignupRequestDto has no other
- * fields — verified against signup-request.dto.ts). The backend emails a
- * verification LINK (not a code) built from its own FRONTEND_URL config;
- * that link's destination is out of this app's control, so there is no
- * corresponding "verifySignup" call here.
+ * Netflix-style signup: the backend emails a verification LINK (not a code)
+ * pointing at this app's own /verify-email (FRONTEND_URL). `returnTo` is
+ * validated server-side and stored against the token -- not embedded in the
+ * emailed link -- so /verify-email never has to trust a client-supplied
+ * query param for where to send the user afterward (see verifySignupToken).
  */
-export async function requestSignup(email: string): Promise<RequestSignupResult> {
+export async function requestSignup(email: string, returnTo?: string | null): Promise<RequestSignupResult> {
   try {
-    const { data } = await api.post<RequestSignupResult>('/auth/request-signup', { email });
+    const { data } = await api.post<RequestSignupResult>('/auth/request-signup', {
+      email,
+      ...(returnTo ? { returnTo } : {}),
+    });
     return data;
   } catch (error) {
     throw toApiError(error);
@@ -173,6 +176,23 @@ export async function freeDeviceSlot(deviceManagementToken: string, deviceId: st
       { deviceId },
       { headers: { Authorization: `Bearer ${deviceManagementToken}` } },
     );
+    return data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export interface VerifySignupTokenResult extends LoginResult {
+  // The origin the user started signup from (e.g. https://patientzero.houselevi.com),
+  // resolved and validated server-side against the houselevi.com allowlist when
+  // /auth/request-signup was first called. Null if none was supplied or it didn't
+  // pass validation, in which case callers should fall back to the default web app.
+  returnTo: string | null;
+}
+
+export async function verifySignupToken(token: string): Promise<VerifySignupTokenResult> {
+  try {
+    const { data } = await api.post<VerifySignupTokenResult>('/auth/verify-token', { token });
     return data;
   } catch (error) {
     throw toApiError(error);
